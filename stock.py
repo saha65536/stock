@@ -42,28 +42,46 @@ def import_csv(stock_code,stock_name):
     # 将日期列作为行索引
     df.set_index(['Date'], inplace=True)
     
+    #获取成交量10日均线
     volMav = df.rolling(10,10).mean()
-    top = df.rolling(top_windows,top_windows,True).max()
     df['volMav'] = volMav['Volume']
+
+    #获取股票价格的局部峰值
+    top = df.rolling(top_windows,top_windows,True).max()    
     df['topTmp'] = top['High']
     dfTmp = df.where(df['topTmp'] == df['High'],0)
     df['top'] = dfTmp['topTmp']
     
+    isModel = False
+    
+    #判断成交量和价格背离
     for i in range(len(df) -period,len(df)):
         for j in range(i + 1, len(df)):
-            if df.iloc[i]['top']!=0 and df.iloc[j]['top']!=0  and df.iloc[i]['top'] > df.iloc[j]['top'] and df.iloc[i]['volMav'] < df.iloc[j]['volMav']:
-                arr_code.append(stock_code)
-                arr_name.append(stock_name)
-                arr_dt_before.append(df.iloc[i]['od'])
-                arr_dt_after.append(df.iloc[j]['od'])
-                arr_top_before.append(df.iloc[i]['top'])
-                arr_top_after.append(df.iloc[j]['top'])
-                #print(str(df.iloc[i]['top'] ) + ':'+str(df.iloc[i]['od']) + ' ' 
-                 #     + str(df.iloc[j]['top']) +':'+ str(df.iloc[j]['od'])) 
+            if df.iloc[i]['top']!=0 and df.iloc[j]['top']!=0:
+                if df.iloc[i]['top'] > df.iloc[j]['top'] and df.iloc[i]['volMav'] < df.iloc[j]['volMav']:
+                    arr_code.append(stock_code)
+                    arr_name.append(stock_name)
+                    arr_dt_before.append(df.iloc[i]['od'])
+                    arr_dt_after.append(df.iloc[j]['od'])
+                    arr_top_before.append(df.iloc[i]['top'])
+                    arr_top_after.append(df.iloc[j]['top'])
+
+                    isModel = True
+                else:
+                    break
+    
+    #30日内有一个涨停
+    dailyLimit = False
+    stockRange = df['pctChg'][-30:]
+    for oneRange in stockRange:
+        if oneRange > 9.7:
+            dailyLimit = True
+            break
      
+    if isModel and dailyLimit:
+        draw(stock_code,df[-period:])
 
-    return df
-
+#画蜡烛图和交易量图
 def draw(stock_code,df):        
     
     # 设置基本参数
@@ -132,15 +150,12 @@ def draw(stock_code,df):
     	style=s, 
         addplot=add_plot,
     	show_nontrading=False,
-    	savefig='data/'+'%s %s_candle_line'
+    	savefig='result/'+'%s %s_candle_line'
     	 % (stock_code, period) + '.jpg')
     plt.show()
     
-def read_dataReader(stock_code):
-    data = web.DataReader(stock_code,'baidu',dt.datetime(2020,1,1),dt.datetime(2020, 8, 28))
-    data.head()
-    data.to_excel(stock_code + '.xlsx')
-    
+
+#读取一只股票的数据    
 def read_onestock(stock_code):    
     
     if os.path.isfile('data/'+ stock_code + '.csv'):
@@ -152,10 +167,10 @@ def read_onestock(stock_code):
     # 周月线指标：date,code,open,high,low,close,volume,amount,adjustflag,turn,pctChg
     rs = bs.query_history_k_data_plus(stock_code,
         "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST",
-        start_date='2020-01-01', end_date='2020-08-31',
+        start_date='2020-06-01', end_date='2020-09-02',
         frequency="d", adjustflag="2")
-    print('query_history_k_data_plus respond error_code:'+rs.error_code)
-    print('query_history_k_data_plus respond  error_msg:'+rs.error_msg)
+    #print('query_history_k_data_plus respond error_code:'+rs.error_code)
+    #print('query_history_k_data_plus respond  error_msg:'+rs.error_msg)
     
     #### 打印结果集 ####
     data_list = []
@@ -169,7 +184,7 @@ def read_onestock(stock_code):
     #print(result)   
     
     
-def read_baostock():
+def stockAnalyse():
     #### 登陆系统 ####
     lg = bs.login()
     # 显示登陆返回信息
@@ -188,25 +203,27 @@ def read_baostock():
     result = pd.DataFrame(zz500_stocks, columns=rs.fields)
     # 结果集输出到csv文件
     result.to_csv('data/'+ 'zz500.csv', index=False)
+    
+    #筛选每个股票
     dfall = pd.read_csv('data/'+ 'zz500.csv')
     for i in range(0,len(dfall)):
         print('begin read :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
         read_onestock(dfall.iloc[i]['code'])
-        dfTmp = import_csv(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])[-period:]
-        #draw(CODE,df)
+        import_csv(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
     
+    #汇总最后筛选结果
     dataframe = pd.DataFrame({'code':arr_code,'name':arr_name,'dt_before':arr_dt_before,'top_before':arr_top_before
                               ,'dt_after':arr_dt_after,'top_after':arr_top_after})
 
     #将DataFrame存储为csv,index表示是否显示行名，default=True
-    dataframe.to_csv('data/result.csv',index=False,sep=',')
+    dataframe.to_csv('result/result.csv',index=False,sep=',')
 
     #### 登出系统 ####
     bs.logout()
     
     
 #主函数入口
-read_baostock()
+stockAnalyse()
 
 
 
