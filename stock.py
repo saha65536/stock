@@ -16,7 +16,7 @@ import pandas_datareader.data as web
 import datetime as dt
 
 
-CODE = 'sh.600211'
+
 period = 40
 arr_code=[]
 arr_name=[]
@@ -27,7 +27,7 @@ arr_top_after=[]
 
 top_windows=12
 
-def import_csv(stock_code,stock_name):
+def modelAnalyse(stock_code,stock_name):
 	# 导入股票数据
     df = pd.read_csv('data/'+ stock_code + '.csv')
     # 格式化列名，用于之后的绘制
@@ -154,6 +154,21 @@ def draw(stock_code,df):
     	 % (stock_code, period) + '.jpg')
     plt.show()
     
+def getRoeAvg(stock_code):
+    profit_list = []
+    rs_profit = bs.query_profit_data(stock_code,year=2020, quarter=2)
+    while (rs_profit.error_code == '0') & rs_profit.next():
+        profit_list.append(rs_profit.get_row_data())
+        
+    result_profit = pd.DataFrame(profit_list, columns=rs_profit.fields)
+    roeAvg = result_profit['roeAvg']
+    if roeAvg[0] =='' :
+        return False
+    if float(roeAvg) > 0.2:
+        print(roeAvg)
+        return True
+    return False
+    
 
 #读取一只股票的数据    
 def read_onestock(stock_code):    
@@ -169,8 +184,6 @@ def read_onestock(stock_code):
         "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST",
         start_date='2020-06-01', end_date='2020-09-02',
         frequency="d", adjustflag="2")
-    #print('query_history_k_data_plus respond error_code:'+rs.error_code)
-    #print('query_history_k_data_plus respond  error_msg:'+rs.error_msg)
     
     #### 打印结果集 ####
     data_list = []
@@ -180,16 +193,35 @@ def read_onestock(stock_code):
     result = pd.DataFrame(data_list, columns=rs.fields)
     
     #### 结果集输出到csv文件 ####   
-    result.to_csv('data/'+ stock_code + '.csv', index=False)
-    #print(result)   
+    result.to_csv('data/'+ stock_code + '.csv', index=False)  
     
     
-def stockAnalyse():
-    #### 登陆系统 ####
-    lg = bs.login()
-    # 显示登陆返回信息
-    print('login respond error_code:'+lg.error_code)
-    print('login respond  error_msg:'+lg.error_msg)
+def exportResult():       
+    
+    #汇总最后筛选结果
+    dataframe = pd.DataFrame({'code':arr_code,'name':arr_name,'dt_before':arr_dt_before
+                              ,'top_before':arr_top_before,'dt_after':arr_dt_after
+                              ,'top_after':arr_top_after})
+
+    #将DataFrame存储为csv,index表示是否显示行名，default=True
+    dataframe.to_csv('result/result.csv',index=False,sep=',')
+    
+def analyse():
+    #模型分析
+    dfall = pd.read_csv('data/'+ 'zz500.csv')
+    for i in range(0,len(dfall)):
+        print('begin Analyse :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
+        modelAnalyse(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
+    
+def getZZ500():
+    #获取每个股票数据
+    dfall = pd.read_csv('data/'+ 'zz500.csv')
+    for i in range(0,len(dfall)):
+        print('begin read :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
+        read_onestock(dfall.iloc[i]['code'])
+    
+    
+def getZZ500List():
     # 获取中证500成分股
     rs = bs.query_zz500_stocks()
     print('query_zz500 error_code:'+rs.error_code)
@@ -204,26 +236,25 @@ def stockAnalyse():
     # 结果集输出到csv文件
     result.to_csv('data/'+ 'zz500.csv', index=False)
     
-    #筛选每个股票
-    dfall = pd.read_csv('data/'+ 'zz500.csv')
-    for i in range(0,len(dfall)):
-        print('begin read :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
-        read_onestock(dfall.iloc[i]['code'])
-        import_csv(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
-    
-    #汇总最后筛选结果
-    dataframe = pd.DataFrame({'code':arr_code,'name':arr_name,'dt_before':arr_dt_before,'top_before':arr_top_before
-                              ,'dt_after':arr_dt_after,'top_after':arr_top_after})
-
-    #将DataFrame存储为csv,index表示是否显示行名，default=True
-    dataframe.to_csv('result/result.csv',index=False,sep=',')
-
-    #### 登出系统 ####
-    bs.logout()
-    
     
 #主函数入口
-stockAnalyse()
+#### 登陆系统 ####
+lg = bs.login()
+# 显示登陆返回信息
+print('login respond error_code:'+lg.error_code)
+print('login respond  error_msg:'+lg.error_msg) 
+
+#获取中证500清单
+getZZ500List()
+#获取中证500每个股票数据
+getZZ500()
+#模型分析
+analyse()
+#导出分析结果
+exportResult()
+
+#### 登出系统 ####
+bs.logout()
 
 
 
