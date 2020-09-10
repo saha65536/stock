@@ -24,6 +24,8 @@ arr_dt_before=[]
 arr_dt_after=[]
 arr_top_before=[]
 arr_top_after=[]
+beg_date='2020-06-01'
+end_date='2020-09-10'
 
 top_windows=12
 
@@ -182,7 +184,7 @@ def read_onestock(stock_code):
     # 周月线指标：date,code,open,high,low,close,volume,amount,adjustflag,turn,pctChg
     rs = bs.query_history_k_data_plus(stock_code,
         "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST",
-        start_date='2020-06-01', end_date='2020-09-02',
+        start_date=beg_date, end_date=end_date,
         frequency="d", adjustflag="2")
     
     #### 打印结果集 ####
@@ -208,33 +210,52 @@ def exportResult():
     
 def analyse():
     #模型分析
-    dfall = pd.read_csv('data/'+ 'zz500.csv')
+    dfall = pd.read_csv('data/'+ 'stocks.csv')
+    makeDIR('./result')
     for i in range(0,len(dfall)):
         print('begin Analyse :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
         modelAnalyse(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
+        
     
-def getZZ500():
+def getStocks():
     #获取每个股票数据
-    dfall = pd.read_csv('data/'+ 'zz500.csv')
+    dfall = pd.read_csv('data/'+ 'stocks.csv')
     for i in range(0,len(dfall)):
         print('begin read :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
         read_onestock(dfall.iloc[i]['code'])
+        
+def makeDIR(dirName):
+    if not os.path.exists(dirName):
+        os.mkdir(dirName)
     
     
-def getZZ500List():
+    
+def getList():
+    stocks = []
+    
     # 获取中证500成分股
     rs = bs.query_zz500_stocks()
     print('query_zz500 error_code:'+rs.error_code)
-    print('query_zz500  error_msg:'+rs.error_msg)
+    print('query_zz500  error_msg:'+rs.error_msg)    
     
-    # 打印结果集
-    zz500_stocks = []
     while (rs.error_code == '0') & rs.next():
         # 获取一条记录，将记录合并在一起
-        zz500_stocks.append(rs.get_row_data())
-    result = pd.DataFrame(zz500_stocks, columns=rs.fields)
+        stocks.append(rs.get_row_data())
+        
+    # 获取中证500成分股
+    rs = bs.query_hs300_stocks()
+    print('query_hs300 error_code:'+rs.error_code)
+    print('query_hs300  error_msg:'+rs.error_msg)    
+    
+    while (rs.error_code == '0') & rs.next():
+        # 获取一条记录，将记录合并在一起
+        stocks.append(rs.get_row_data())
+        
+    result = pd.DataFrame(stocks, columns=rs.fields)
     # 结果集输出到csv文件
-    result.to_csv('data/'+ 'zz500.csv', index=False)
+    
+    makeDIR('./data')
+    result.to_csv('data/'+ 'stocks.csv', index=False)
     
     
 #主函数入口
@@ -245,9 +266,9 @@ print('login respond error_code:'+lg.error_code)
 print('login respond  error_msg:'+lg.error_msg) 
 
 #获取中证500清单
-getZZ500List()
+getList()
 #获取中证500每个股票数据
-getZZ500()
+getStocks()
 #模型分析
 analyse()
 #导出分析结果
