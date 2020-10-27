@@ -25,9 +25,9 @@ arr_dt_after=[]
 arr_top_before=[]
 arr_top_after=[]
 beg_date='2020-06-01'
-end_date='2020-09-10'
+end_date=dt.datetime.now().strftime('%Y-%m-%d')
 
-top_windows=12
+top_windows=11
 
 def modelAnalyse(stock_code,stock_name):
 	# 导入股票数据
@@ -147,14 +147,16 @@ def draw(stock_code,df):
     # 图形绘制
     # show_nontrading:是否显示非交易日，默认False
     # savefig:导出图片，填写文件名及后缀
-    mpf.plot(df, 
-    	**kwargs, 
-    	style=s, 
-        addplot=add_plot,
-    	show_nontrading=False,
-    	savefig='result/'+'%s %s_candle_line'
-    	 % (stock_code, period) + '.jpg')
-    plt.show()
+    fileName = 'result/'+'%s %s_candle_line' % (stock_code, period) + '.jpg'
+    if not os.path.exists(fileName): 
+        mpf.plot(df, 
+        	**kwargs, 
+        	style=s, 
+            addplot=add_plot,
+        	show_nontrading=False,
+        	savefig=fileName)
+    
+        plt.show()
     
 def getRoeAvg(stock_code):
     profit_list = []
@@ -242,7 +244,7 @@ def getList():
         # 获取一条记录，将记录合并在一起
         stocks.append(rs.get_row_data())
         
-    # 获取中证500成分股
+    # 获取沪深300成分股
     rs = bs.query_hs300_stocks()
     print('query_hs300 error_code:'+rs.error_code)
     print('query_hs300  error_msg:'+rs.error_msg)    
