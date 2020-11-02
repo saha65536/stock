@@ -25,6 +25,9 @@ class bankerFollow:
         self.check_code = []
         self.check_score = []
         self.check_profit = []
+        self.analists = [[] for i in range(8)]
+        self.anaLiqaShare = []
+        self.anaCurrPrice = []
         
         #### 登陆系统 ####
         lg = bs.login()
@@ -129,22 +132,66 @@ class bankerFollow:
         #判断第二天最高点与第一天收盘价的比较结果     
         score = 0
         increaseRate = 0.0
+        anaList = [0,0,0,0,0,0,0,0]
         for i in range(1,len(df)):
             if not df.iloc[i]['od'].startswith(self.anaMonth) :
                 break
             j = i - 1
             if df.iloc[i]['High'] > df.iloc[j]['Close']:
                 score = score + 1
-                increaseRate = increaseRate + (df.iloc[i]['High']-df.iloc[j]['Close'])/df.iloc[j]['Close'] * 100
+            rate = (df.iloc[i]['High']-df.iloc[j]['Close'])/df.iloc[j]['Close'] * 100
+            increaseRate = increaseRate + rate
+            result = self.periodCheck(rate)
+            index = int(result)
+            if index > -1:
+                anaList[index] = anaList[index] + 1                
         
         if score > 0:
             self.arr_code.append(stock_code)
             self.arr_score.append(score)
             self.arr_increaseRate.append(increaseRate/score)
             
+            liqaShare = self.queryInfo(stock_code)
+            self.anaLiqaShare.append(liqaShare)
+            self.anaCurrPrice.append(df.iloc[len(df) - 1]['Close'])
+            
+            for i in range(8):
+                self.analists[i].append(anaList[i])
+                
+    def queryInfo(self,stock_code):
+        profit_list = []
+        rs_profit = bs.query_profit_data(stock_code,year=2020, quarter=2)
+        while (rs_profit.error_code == '0') & rs_profit.next():
+            profit_list.append(rs_profit.get_row_data())
+        
+        result_profit = pd.DataFrame(profit_list, columns=rs_profit.fields)
+        liqaShare = result_profit['liqaShare']
+        return float(liqaShare)
+            
+    def periodCheck(self, rate):
+        if rate < -2:
+            return 0
+        elif rate < -1:
+            return 1
+        elif rate < -0.5:
+            return 2
+        elif rate < 0:
+            return 3
+        elif rate < 0.5:
+            return 4
+        elif rate < 1:
+            return 5
+        elif rate < 2:
+            return 6
+        return 7
+            
     #输出分析结果
     def exportAnaResult(self):
-        df = pd.DataFrame({'code':self.arr_code,'score':self.arr_score,'increaseRate':self.arr_increaseRate})
+        df = pd.DataFrame({'code':self.arr_code,'score':self.arr_score,'increaseRate':self.arr_increaseRate
+                           ,'-2以下':self.analists[0],'-2到-1':self.analists[1],'-1到-0.5':self.analists[2]
+                           ,'-0.5到0':self.analists[3],'0到0.5':self.analists[4],'0.5到1':self.analists[5]
+                           ,'1到2':self.analists[6],'2以上':self.analists[7],'流通股本':self.anaLiqaShare
+            ,'当前价格':self.anaCurrPrice})
 
         self.makeDIR('./result')        
         df.sort_values(by= "score",ascending = False,inplace = True)
