@@ -13,3 +13,4 @@ if __name__ == '__main__':
         macdIns = MacdDivergence()
         dfOne = stockData.getOneStockData(stockCode)
         macdIns.analyse(dfOne, stockCode, stockName)
+        

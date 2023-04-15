@@ -163,7 +163,7 @@ class StockData:
         elif self.__data_type__ == StockData.DB_TYPE:       
             read_sql = ("SELECT * FROM stock_day_data where code ='" + stockCode + "'"
             " and date > '" + self.__beg_date__ + "'"  
-            " and date < '" + self.__end_date__ + "'")   
+            " and date < '" + self.__end_date__ + "' order by date asc")   
             df = pd.read_sql_query(read_sql, self.conn)
             return df
         
