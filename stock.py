@@ -14,17 +14,19 @@ import matplotlib.pyplot as plt
 
 import pandas_datareader.data as web
 import datetime as dt
+import talib as ta
+import numpy as np
 
 
 
-period = 40
+period = 90
 arr_code=[]
 arr_name=[]
 arr_dt_before=[]
 arr_dt_after=[]
 arr_top_before=[]
 arr_top_after=[]
-beg_date='2020-06-01'
+beg_date='2022-10-01'
 end_date=dt.datetime.now().strftime('%Y-%m-%d')
 
 top_windows=11
@@ -47,6 +49,21 @@ def modelAnalyse(stock_code,stock_name):
     #获取成交量10日均线
     volMav = df.rolling(10,10).mean()
     df['volMav'] = volMav['Volume']
+    
+    #计算cci
+#    highlist = df['High'].astype('float')
+#    lowlist = df['Low'].astype('float')
+#    closelist = df['Close'].astype('float')
+#    CCIlist = ta.CCI(highlist,lowlist,closelist)
+#    bCCI = False
+#    if(CCIlist[-1] > -100 and CCIlist[-2] < -100):
+#        bCCI = True
+    #计算rsi
+    closelist = df['Close'].astype('float')
+    rsi_6days = ta.RSI(closelist,timeperiod=6)
+    bRSI = False
+    if rsi_6days[-1] < 20 or rsi_6days[-2] < 20 or rsi_6days[-3] < 20:
+        bRSI = True
 
     #获取股票价格的局部峰值
     top = df.rolling(top_windows,top_windows,True).max()    
@@ -215,8 +232,8 @@ def analyse():
     dfall = pd.read_csv('data/'+ 'stocks.csv')
     makeDIR('./result')
     for i in range(0,len(dfall)):
-        print('begin Analyse :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
-        modelAnalyse(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
+        #print('begin Analyse :' + str(i) + ' '+ dfall.iloc[i]['code']+ ' '+ dfall.iloc[i]['code_name'])
+        macdAnalyse(dfall.iloc[i]['code'],dfall.iloc[i]['code_name'])
         
     
 def getStocks():
@@ -258,6 +275,52 @@ def getList():
     
     makeDIR('./data')
     result.to_csv('data/'+ 'stocks.csv', index=False)
+
+# 定义函数，输入参数为股票代码和股票名称
+def macdAnalyse(stock_code, stock_name):
+    df = pd.read_csv('data/'+ stock_code + '.csv')
+    
+    # 计算MACD指标
+    df['MACD'], df['MACDsignal'], df['MACDhist'] = ta.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    # 计算金叉和死叉信号
+    df['golden_cross'] = np.where(df['MACD'] > df['MACDsignal'], 1, 0)
+    df['dead_cross'] = np.where(df['MACD'] < df['MACDsignal'], 1, 0)
+    # 找到金叉和死叉的位置
+    golden_cross_points = np.where(df['golden_cross'].diff() == 1)[0]
+    dead_cross_points = np.where(df['dead_cross'].diff() == 1)[0]
+    # 找到最近的两个金叉位置
+    # 初始化底背离计数器
+    divergence_count = 0
+    # 存储底背离时间的列表
+    divergence_dates = []
+    # 检查每对相邻的金叉点
+    for i in range(len(golden_cross_points) - 1):
+        golden_cross_A = golden_cross_points[i]
+        golden_cross_B = golden_cross_points[i + 1]
+        macd_A = df.iloc[golden_cross_A]['MACD']
+        macd_B = df.iloc[golden_cross_B]['MACD']
+        low_A = df.iloc[golden_cross_A:golden_cross_A+2]['low'].min()
+        low_B = df.iloc[golden_cross_B:golden_cross_B+2]['low'].min()
+
+        date_A = pd.to_datetime(df.iloc[golden_cross_A]['date'])
+        date_B = pd.to_datetime(df.iloc[golden_cross_B]['date'])
+        date_diff = (date_B - date_A).days
+        
+        # 判断是否为底背离
+        if macd_A < macd_B and low_A > low_B and date_diff >= 10:
+            divergence_count += 1
+            divergence_dates.append((df.iloc[golden_cross_A]['date'], df.iloc[golden_cross_B]['date']))
+
+
+    # 输出底背离情况
+    if divergence_count >= 2:
+        print(stock_code, stock_name, '至少存在两次底背离')
+        print('底背离时间：')
+        for i, (date_A, date_B) in enumerate(divergence_dates, 1):
+            print(f'第{i}次底背离：{date_A} - {date_B}')
+
+    
+        
     
     
 #主函数入口
@@ -278,6 +341,7 @@ exportResult()
 
 #### 登出系统 ####
 bs.logout()
+
 
 
 
