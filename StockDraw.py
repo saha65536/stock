@@ -11,7 +11,6 @@ class StockDraw:
     def __init__(self, dfIn, strategyName):
         self.df = dfIn
         self.strategyName = strategyName
-        self.available_dates = pd.date_range(dfIn['date'].min(), dfIn['date'].max()).difference(dfIn['date'])
 
         # 检查 result 文件夹下是否有 strategyName 文件夹
         self.strategy_path = os.path.join("result", self.strategyName)
@@ -23,17 +22,17 @@ class StockDraw:
 
     def draw_candlestick(self, ax):
         ohlc = self.df[['date', 'open', 'high', 'low', 'close']].copy()
-        ohlc['date'] = mdates.date2num(ohlc['date'].dt.to_pydatetime())
-        ohlc = ohlc.values.tolist()
+        ohlc['date'] = pd.to_datetime(ohlc['date'])
+        ohlc['date_idx'] = range(len(ohlc))  # 添加整数索引
+        ohlc = ohlc[['date_idx', 'open', 'high', 'low', 'close']].values.tolist()
         candlestick_ohlc(ax, ohlc, width=0.7, colorup='red', colordown='green')
 
         ax.set_title('Stock Price')
-        ax.xaxis_date()
         ax.grid(True)
 
-        # 仅显示具有成交数据的日期
+        date_idx_to_date = self.df['date'].reset_index(drop=True).to_dict()  # 整数索引到日期的映射
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
-
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: date_idx_to_date.get(x, '')))  # 使用自定义刻度标签
 
 
 
@@ -48,7 +47,6 @@ class StockDraw:
 
         ax.legend(loc='upper left')
         ax.set_title('MACD')
-        ax.xaxis_date()
         ax.grid(True)
 
         # 仅显示具有成交数据的日期
@@ -83,7 +81,6 @@ class StockDraw:
 
         ax.legend(loc='upper left')
         ax.set_title('KDJ')
-        ax.xaxis_date()
         ax.grid(True)
 
         # 仅显示具有成交数据的日期
@@ -108,7 +105,6 @@ class StockDraw:
         
         ax.legend(loc='upper left')
         ax.set_title('Daily Turnover')
-        ax.xaxis_date()
         ax.grid(True)
 
         # 仅显示具有成交数据的日期
@@ -117,7 +113,6 @@ class StockDraw:
 
     def draw_macd_kdj(self, stock_code):
         df = self.df
-        df['date'] = pd.to_datetime(df['date'])
 
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
 
@@ -129,7 +124,6 @@ class StockDraw:
 
     def draw_macd_candle(self, stock_code):
         df = self.df
-        df['date'] = pd.to_datetime(df['date'])
 
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
@@ -140,7 +134,6 @@ class StockDraw:
 
     def draw_candle_macd_turnover(self, stock_code):
         df = self.df
-        df['date'] = pd.to_datetime(df['date'])
 
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
 
