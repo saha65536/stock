@@ -18,8 +18,6 @@ class StockDraw:
             os.makedirs(self.strategy_path)
         self.strategy_path = self.strategy_path + "/"
 
-     
-
     def draw_candlestick(self, ax):
         ohlc = self.df[['date', 'open', 'high', 'low', 'close']].copy()
         ohlc['date'] = pd.to_datetime(ohlc['date'])
@@ -27,15 +25,23 @@ class StockDraw:
         ohlc = ohlc[['date_idx', 'open', 'high', 'low', 'close']].values.tolist()
         candlestick_ohlc(ax, ohlc, width=0.7, colorup='red', colordown='green')
 
+        # 计算移动平均线
+        ma_5 = self.df['close'].rolling(window=5).mean()
+        ma_34 = self.df['close'].rolling(window=34).mean()
+
+        # 绘制移动平均线
+        ax.plot(range(len(self.df)), ma_5, label='5-Day MA', color='blue', linewidth=1)
+        ax.plot(range(len(self.df)), ma_34, label='34-Day MA', color='purple', linewidth=1)
+
         ax.set_title('Stock Price')
         ax.grid(True)
+        ax.legend(loc='best')
 
         date_idx_to_date = self.df['date'].reset_index(drop=True).to_dict()  # 整数索引到日期的映射
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
         ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: date_idx_to_date.get(x, '')))  # 使用自定义刻度标签
 
-
-
+    
     def draw_macd(self, ax):
         df = self.df
         ema12 = df['close'].ewm(span=12, adjust=False).mean()
@@ -89,6 +95,12 @@ class StockDraw:
 
     def draw_turnover(self, ax):
         df = self.df
+        try:
+            df['volume'] = df['volume'].astype(float)
+        except ValueError:
+            for value in df['volume']:
+                print(value)
+        df['close'] = df['close'].astype(float)
         turnover = df['volume'] * df['close']
 
         # 计算 5 日和 10 日平均成交额

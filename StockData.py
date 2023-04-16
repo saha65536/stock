@@ -10,9 +10,10 @@ class StockData:
     DBNAME = 'D:/sqlite/data/stocks_db.db'
 
     def __init__(self, beg_date, end_date, dataType):
-        lg = bs.login()
-        print('login respond error_code:'+lg.error_code)
-        print('login respond  error_msg:'+lg.error_msg) 
+        if dataType == StockData.CSV_TYPE:
+            lg = bs.login()
+            print('login respond error_code:'+lg.error_code)
+            print('login respond  error_msg:'+lg.error_msg) 
         self.__dataStoreDir__ = './data/'
         self.__resultStoreDir__ = './result/'
         self.__beg_date__ = beg_date

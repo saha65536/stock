@@ -47,8 +47,14 @@ class MacdDivergence(StockStrategy):
         if divergence_count >= 2:
             print(stockCode + stockName + ' 至少存在两次底背离')
             print('底背离时间：')
+            date_last = ''
             for i, (date_A, date_B) in enumerate(divergence_dates, 1):
                 print(f'第{i}次底背离：{date_A} - {date_B}')
+                date_last = date_B
 
             stockDraw = StockDraw(df, 'macd')
-            stockDraw.draw_candle_macd_turnover(stockName)             
+            stockDraw.draw_candle_macd_turnover(stockName)      
+
+            return stockCode, date_last      
+
+        return '','' 
