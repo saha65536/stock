@@ -142,9 +142,9 @@ class StockDraw:
         self.draw_candlestick(ax1)
         self.draw_macd(ax2)
 
-        plt.savefig(self.strategy_path + stock_code + "_macd_candle.jpg") 
+        plt.savefig(self.strategy_path + stock_code + ".jpg") 
 
-    def draw_candle_macd_turnover(self, stock_code):
+    def draw_candle_macd_turnover(self, stock_code, date_last):
         df = self.df
 
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
@@ -153,6 +153,6 @@ class StockDraw:
         self.draw_macd(ax2)
         self.draw_turnover(ax3)
 
-        plt.savefig(self.strategy_path + stock_code + "_candle_macd_turnover.jpg")
+        plt.savefig(self.strategy_path + stock_code + "_" + date_last + ".jpg")
 
 

@@ -49,14 +49,14 @@ def stock_strategy_test(test_date, df):
             if current_return_rate > 20:
                 return_rate = current_return_rate
                 insertArr = (df['code'].iloc[1] ,df.loc[buy_index, 'date'] ,buy_price
-                             ,df.loc[buy_index + i, 'date'], current_close, return_rate)                
+                             ,df.loc[i, 'date'], current_close, return_rate)                
                 break
             
             # 如果收益率低于-8%，卖掉
             if current_return_rate < -8:
                 return_rate = current_return_rate
                 insertArr = (df['code'].iloc[1] ,df.loc[buy_index, 'date'] ,buy_price
-                             ,df.loc[buy_index + i, 'date'], current_close, return_rate)  
+                             ,df.loc[i, 'date'], current_close, return_rate)  
                 break
                 
         # 如果20天内没有卖掉，则以第20天的收盘价卖掉

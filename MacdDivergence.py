@@ -52,8 +52,11 @@ class MacdDivergence(StockStrategy):
                 print(f'第{i}次底背离：{date_A} - {date_B}')
                 date_last = date_B
 
-            stockDraw = StockDraw(df, 'macd')
-            stockDraw.draw_candle_macd_turnover(stockName)      
+            try:    
+                stockDraw = StockDraw(df, 'macd')
+                stockDraw.draw_candle_macd_turnover(stockCode, date_last)   
+            except:
+                print("draw error")   
 
             return stockCode, date_last      
 

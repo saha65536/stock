@@ -23,14 +23,14 @@ class StockData:
             # 创建一个SQLite3连接
             try:
                 self.conn = sqlite3.connect(StockData.DBNAME)
-                print("数据库连接成功")
+                #print("数据库连接成功")
             except sqlite3.Error as e:
                 print("数据库连接失败：", e)
 
     def __del__(self):
         if self.__data_type__ == StockData.DB_TYPE:
             self.conn.close()
-            print("数据库已关闭")
+            #print("数据库已关闭")
 
     def downloadData(self):
         self.__getList__()
