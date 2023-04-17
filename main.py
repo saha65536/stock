@@ -40,7 +40,7 @@ def testStrategy(beg_date, end_date):
     print(result)
 
 if __name__ == '__main__':
-    for yearVal in range(2022, 2023):   
+    for yearVal in range(2010, 2023):   
         begDate = str(yearVal) + '-01-01'
         endDate = str(yearVal) + '-06-30'
         testStrategy(begDate, endDate)
