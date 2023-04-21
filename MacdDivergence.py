@@ -53,7 +53,7 @@ class MacdDivergence(StockStrategy):
                 date_last = date_B
     
             stockDraw = StockDraw(df, 'macd')
-            stockDraw.draw_candle_macd_turnover(stockName, date_last)
+            stockDraw.draw_candle_macd_obv(stockName, date_last)
             return stockCode, date_last      
 
         return '','' 

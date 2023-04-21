@@ -50,7 +50,7 @@ def testStrategy():
         __testStrategy__(begDate, endDate)
 
 def macdGet():
-    stockData = StockData('2022-10-01', '2023-04-19', 2)
+    stockData = StockData('2022-10-01', '2023-04-21', 2)
     dfList = stockData.getStocksList()
     for index,row in dfList.iterrows():
         stockCode = row['code']

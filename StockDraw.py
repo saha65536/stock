@@ -5,6 +5,7 @@ import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
 import os
 import matplotlib.ticker as ticker
+from StockData import StockData
 
 
 class StockDraw:
@@ -122,6 +123,52 @@ class StockDraw:
         # 仅显示具有成交数据的日期
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
 
+    #画OBV量化指标On-Balance Volume（OBV）是一种技术分析指标，用于衡量成交量与价格变动的关系，以评估资金流入和流出的动态。OBV的计算方法如下：
+    #
+    #如果当天的收盘价比前一天高，则OBV等于前一天的OBV加上当天的成交量。
+    #如果当天的收盘价比前一天低，则OBV等于前一天的OBV减去当天的成交量。
+    #如果当天的收盘价与前一天相同，则OBV保持不变。
+
+    def draw_obv(self, ax):
+        df = self.df
+        try:
+            df['volume'] = df['volume'].astype(float)
+        except ValueError:
+            for value in df['volume']:
+                print(value)
+        df['close'] = df['close'].astype(float)
+        
+        # 计算OBV
+        obv = [0]
+        for i in range(1, len(df)):
+            if df['close'][i] > df['close'][i - 1]:
+                obv.append(obv[-1] + df['volume'][i])
+            elif df['close'][i] < df['close'][i - 1]:
+                obv.append(obv[-1] - df['volume'][i])
+            else:
+                obv.append(obv[-1])
+
+        df['obv'] = obv
+
+        # 计算 5 日和 10 日平均OBV
+        obv_ma5 = df['obv'].rolling(window=5).mean()
+        obv_ma10 = df['obv'].rolling(window=10).mean()
+
+        # 绘制OBV折线图
+        ax.plot(df['date'], df['obv'], label='OBV', color='red', alpha=0.7)
+
+        # 绘制 5 日和 10 日平均OBV折线图
+        ax.plot(df['date'], obv_ma5, label='5-day MA', color='blue')
+        ax.plot(df['date'], obv_ma10, label='10-day MA', color='orange')
+
+        ax.legend(loc='upper left')
+        ax.set_title('On Balance Volume (OBV)')
+        ax.grid(True)
+
+        # 仅显示具有成交数据的日期
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
+
+
 
     def draw_macd_kdj(self, stock_code):
         df = self.df
@@ -154,5 +201,22 @@ class StockDraw:
         self.draw_turnover(ax3)
 
         plt.savefig(self.strategy_path + stock_code + "_" + date_last + ".jpg")
+
+    def draw_candle_macd_obv(self, stock_code, date_last):
+        df = self.df
+
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
+
+        self.draw_candlestick(ax1)
+        self.draw_macd(ax2)
+        self.draw_obv(ax3)
+
+        plt.savefig(self.strategy_path + stock_code + "_" + date_last + ".jpg")
+
+if __name__ == '__main__':
+    stockData = StockData('2022-10-01', '2023-04-21', 2)
+    dfOne = stockData.getOneStockData('sh.601127')
+    stockDraw = StockDraw(dfOne, 'macd')
+    stockDraw.draw_candle_macd_obv('赛力斯', '2023-04-21')
 
 

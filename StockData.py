@@ -34,6 +34,10 @@ class StockData:
 
     def downloadData(self):
         self.__getStocks__()
+
+    def downloadOneStockData(self, code):
+        self.__read_onestock__(code)
+        self.conn.commit()
     
         
     def __makeDIR__(self,dirName):
@@ -220,8 +224,9 @@ class StockData:
       
     
 if __name__ == '__main__':
-    stockData = StockData('2010-01-01', '2021-12-31', 2)
+    stockData = StockData('2010-01-01', '2023-04-21', 2)
     #stockData.updateStocks()
-    stockData.downloadData()
+    #stockData.downloadData()
+    stockData.downloadOneStockData('sh.601127')
 
 
