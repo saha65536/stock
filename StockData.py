@@ -2,6 +2,7 @@ import pandas as pd
 import baostock as bs
 import os
 import sqlite3
+from datetime import datetime, timedelta
 
 #股票数据类，下载数据并保存到文件
 class StockData:
@@ -10,10 +11,9 @@ class StockData:
     DBNAME = 'D:/sqlite/data/stocks_db.db'
 
     def __init__(self, beg_date, end_date, dataType):
-        if dataType == StockData.CSV_TYPE:
-            lg = bs.login()
-            print('login respond error_code:'+lg.error_code)
-            print('login respond  error_msg:'+lg.error_msg) 
+        lg = bs.login()
+        print('login respond error_code:'+lg.error_code)
+        print('login respond  error_msg:'+lg.error_msg) 
         self.__dataStoreDir__ = './data/'
         self.__resultStoreDir__ = './result/'
         self.__beg_date__ = beg_date
@@ -33,7 +33,6 @@ class StockData:
             #print("数据库已关闭")
 
     def downloadData(self):
-        self.__getList__()
         self.__getStocks__()
     
         
@@ -117,21 +116,62 @@ class StockData:
                         'pctChg': 'REAL', 'isST': 'INTEGER'})
 
 
-  
+    def shrink_date_range(self, min_date, max_date, beg_date, end_date):
+        if max_date is not None and min_date is not None:
+            # 情况1: beg_date和end_date都在现有数据范围内
+            if beg_date >= min_date and end_date <= max_date:
+                return None, None
+
+            # 情况2: beg_date在现有数据范围内，end_date在现有数据范围外
+            if beg_date >= min_date and beg_date <= max_date and end_date > max_date:
+                beg_date = max_date
+                beg_date = datetime.strptime(beg_date, '%Y-%m-%d')
+                beg_date += timedelta(days=1)
+                beg_date = beg_date.strftime('%Y-%m-%d')
+
+            # 情况3: end_date在现有数据范围内，beg_date在现有数据范围外
+            if end_date >= min_date and end_date <= max_date and beg_date < min_date:
+                end_date = min_date
+                end_date = datetime.strptime(end_date, '%Y-%m-%d')
+                end_date -= timedelta(days=1)
+                end_date = end_date.strftime('%Y-%m-%d')
+
+        return beg_date, end_date
 
     
     #读取一只股票的数据    
     def __read_onestock__(self, stock_code):    
         
         if os.path.isfile('data/'+ stock_code + '.csv'):
+            return      
+        
+        # Create a cursor object to interact with the database
+        cursor = self.conn.cursor()
+
+        # Execute the SELECT query
+        cursor.execute("SELECT min(date),max(date) from stock_day_data where code ='" + stock_code + "'")
+
+        # Fetch the result of the query
+        min_date, max_date = cursor.fetchone()
+
+        # Close the cursor and the connection to the database
+        cursor.close()
+
+        beg_date = self.__beg_date__
+        end_date = self.__end_date__
+
+        beg_date, end_date = self.shrink_date_range(min_date, max_date, beg_date, end_date)
+
+        if beg_date > end_date:
             return
+
         
         # 分钟线指标：date,time,code,open,high,low,close,volume,amount,adjustflag
         # 周月线指标：date,code,open,high,low,close,volume,amount,adjustflag,turn,pctChg
         rs = bs.query_history_k_data_plus(stock_code,
             "date,code,open,high,low,close,preclose,volume"+
             ",amount,adjustflag,turn,tradestatus,pctChg,isST",
-            start_date = self.__beg_date__, end_date = self.__end_date__,
+            start_date = beg_date, end_date = end_date,
             frequency="d", adjustflag="2")
         
         # 打印结果集
@@ -170,6 +210,7 @@ class StockData:
         
     def getStocksList(self):
         if self.__data_type__ == StockData.CSV_TYPE:
+            self.__getList__()
             dfall = pd.read_csv('data/'+ 'stocks.csv')
             return dfall
         elif self.__data_type__ == StockData.DB_TYPE:
@@ -179,8 +220,8 @@ class StockData:
       
     
 if __name__ == '__main__':
-    stockData = StockData('2010-01-01', '2023-04-14', 2)
+    stockData = StockData('2010-01-01', '2021-12-31', 2)
     #stockData.updateStocks()
-    #stockData.downloadData()
+    stockData.downloadData()
 
 

@@ -20,7 +20,7 @@ def dateCut(date_B, daycut):
 
     return date_B_str_plus
 
-def testStrategy(beg_date, end_date):
+def __testStrategy__(beg_date, end_date):
     stockData = StockData(beg_date, end_date, 2)
     dfList = stockData.getStocksList()
     result = 0.0
@@ -39,13 +39,28 @@ def testStrategy(beg_date, end_date):
 
     print(result)
 
-if __name__ == '__main__':
+def testStrategy():
     for yearVal in range(2010, 2023):   
         begDate = str(yearVal) + '-01-01'
         endDate = str(yearVal) + '-06-30'
-        testStrategy(begDate, endDate)
+        __testStrategy__(begDate, endDate)
 
         begDate = str(yearVal) + '-07-01'
         endDate = str(yearVal) + '-12-31'
-        testStrategy(begDate, endDate)
+        __testStrategy__(begDate, endDate)
+
+def macdGet():
+    stockData = StockData('2022-10-01', '2023-04-19', 2)
+    dfList = stockData.getStocksList()
+    for index,row in dfList.iterrows():
+        stockCode = row['code']
+        stockName = row['code_name']
+        macdIns = MacdDivergence()
+        dfOne = stockData.getOneStockData(stockCode)
+        if 0 == len(dfOne):
+            continue
+        macdIns.analyse(dfOne, stockCode, stockName)
+
+if __name__ == '__main__':
+    macdGet()
         
