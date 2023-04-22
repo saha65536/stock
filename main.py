@@ -72,8 +72,8 @@ def crossYear():
         dfOne = stockData.getOneStockData(stockCode)
         if 0 == len(dfOne):
             continue
-        crossYearIns.analyse(dfOne, stockName)
+        crossYearIns.analyse(dfOne, stockCode, stockName)
 
 if __name__ == '__main__':
-    macdGet()
+    crossYear()
         

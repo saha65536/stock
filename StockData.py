@@ -225,8 +225,8 @@ class StockData:
     
 if __name__ == '__main__':
     stockData = StockData('2010-01-01', '2023-04-21', 2)
-    #stockData.updateStocks()
-    #stockData.downloadData()
-    stockData.downloadOneStockData('sh.601127')
+    stockData.updateStocks()
+    stockData.downloadData()
+    #stockData.downloadOneStockData('sh.601127')
 
 

@@ -8,14 +8,15 @@ class CrossYear(StockStrategy):
     def __init__(self) -> None:
         super().__init__()
 
-    def analyse(self, stockDf, stockName):
+    def analyse(self, stockDf, stockCode, stockName):
+        bRturn = False
         # 获取均线
-        stockDf['MA5'] = stockDf['Close'].rolling(5).mean()
-        stockDf['MA34'] = stockDf['Close'].rolling(34).mean()
-        stockDf['MA170'] = stockDf['Close'].rolling(170).mean()
+        stockDf['MA5'] = stockDf['close'].rolling(5).mean()
+        stockDf['MA34'] = stockDf['close'].rolling(34).mean()
+        stockDf['MA170'] = stockDf['close'].rolling(170).mean()
 
         # 计算90日平均成交量
-        stockDf['MA90_Volume'] = stockDf['Volume'].rolling(90).mean()
+        stockDf['MA90_Volume'] = stockDf['volume'].rolling(90).mean()
 
         # 最近30天内5日线上穿170日线
         cross_days = []
@@ -26,16 +27,19 @@ class CrossYear(StockStrategy):
         # 90日内成交量一直很小，只有1-5天的成交量是90日平均成交量的2倍及以上
         low_volume_days = []
         for i in range(len(stockDf) - 90, len(stockDf)):
-            if stockDf.loc[i, 'Volume'] < 2 * stockDf.loc[i, 'MA90_Volume']:
+            if stockDf.loc[i, 'volume'] < 1.5 * stockDf.loc[i, 'MA90_Volume']:
                 low_volume_days.append(i)
 
         if len(low_volume_days) >= 85 and len(low_volume_days) < 90 and len(cross_days) > 0:
-            print(stockName + "符合穿越年线策略")
-            cc = self.calculate_chip_concentration(stockDf)
-            print("筹码集中度是：" + str(cc))
-            return True
+            cc = self.calculate_chip_concentration(stockDf.tail(340))
+            if cc < 0.2 :
+                print(stockCode + stockName + "符合穿越年线策略")
+                print("筹码集中度是：" + str(cc))
+                bRturn = True
         else:
-            return False
+            bRturn = False
+
+        return bRturn
         
     def calculate_chip_concentration(self, df, price_interval=1.0, concentration_percentage=80):
         # 创建一个新列 'price_level'，将收盘价按照设定的价格区间进行分组
@@ -60,6 +64,20 @@ class CrossYear(StockStrategy):
                 break
                 
         return chip_concentration / len(sorted_df)
+    
+    def priceFluct(self, stockDf):
+        last_120_to_30 = stockDf[-120:-30]
+        high_max = last_120_to_30['high'].max()
+        low_min = last_120_to_30['low'].min()
+
+        price_fluctuation = (high_max - low_min) / low_min
+        if price_fluctuation <= 0.1:
+            print(high_max)
+            print(low_min)
+            return True
+        else:
+            return False
+
 
 
 
