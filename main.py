@@ -3,6 +3,7 @@ from StockData import StockData
 from MacdDivergence import MacdDivergence
 from BackTest import stock_strategy_test
 from datetime import datetime, timedelta
+from CrossYear import CrossYear
 
 
 
@@ -60,6 +61,18 @@ def macdGet():
         if 0 == len(dfOne):
             continue
         macdIns.analyse(dfOne, stockCode, stockName)
+
+def crossYear():
+    stockData = StockData('2010-01-01', '2023-04-21', 2)
+    dfList = stockData.getStocksList()
+    for index,row in dfList.iterrows():
+        stockCode = row['code']
+        stockName = row['code_name']
+        crossYearIns = CrossYear()
+        dfOne = stockData.getOneStockData(stockCode)
+        if 0 == len(dfOne):
+            continue
+        crossYearIns.analyse(dfOne, stockName)
 
 if __name__ == '__main__':
     macdGet()
