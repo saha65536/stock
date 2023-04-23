@@ -6,10 +6,11 @@ from matplotlib.patches import Rectangle
 import os
 import matplotlib.ticker as ticker
 from StockData import StockData
+from datetime import timedelta
 
 
 class StockDraw:
-    def __init__(self, dfIn, strategyName):
+    def __init__(self, dfIn, strategyName, drawOnly):
         self.df = dfIn
         self.strategyName = strategyName
 
@@ -18,39 +19,55 @@ class StockDraw:
         if not os.path.exists(self.strategy_path):
             os.makedirs(self.strategy_path)
         self.strategy_path = self.strategy_path + "/"
+        self.drawOnly = drawOnly
 
     def draw_candlestick(self, ax):
-        ohlc = self.df[['date', 'open', 'high', 'low', 'close']].copy()
+        # 计算EMA
+        self.df['ema_12'] = self.df['close'].ewm(span=12, adjust=False).mean()
+        self.df['ema_144'] = self.df['close'].ewm(span=144, adjust=False).mean()
+        self.df['ema_169'] = self.df['close'].ewm(span=169, adjust=False).mean()
+
+        # 只选取最近6个月的数据
+        six_months_ago = pd.to_datetime(self.df['date'].iloc[-1]) - timedelta(days=self.drawOnly)
+        self.df['date'] = pd.to_datetime(self.df['date'])
+        recent_df = self.df[self.df['date'] >= six_months_ago]
+
+
+        ohlc = recent_df[['date', 'open', 'high', 'low', 'close']].copy()
         ohlc['date'] = pd.to_datetime(ohlc['date'])
         ohlc['date_idx'] = range(len(ohlc))  # 添加整数索引
         ohlc = ohlc[['date_idx', 'open', 'high', 'low', 'close']].values.tolist()
         candlestick_ohlc(ax, ohlc, width=0.7, colorup='red', colordown='green')
 
-        # 计算移动平均线
-        ma_5 = self.df['close'].rolling(window=5).mean()
-        ma_34 = self.df['close'].rolling(window=34).mean()
-
-        # 绘制移动平均线
-        ax.plot(range(len(self.df)), ma_5, label='5-Day MA', color='blue', linewidth=1)
-        ax.plot(range(len(self.df)), ma_34, label='34-Day MA', color='purple', linewidth=1)
+        # 绘制EMA
+        ax.plot(range(len(recent_df)), recent_df['ema_12'], label='EMA 12', color='blue', linewidth=1)
+        ax.plot(range(len(recent_df)), recent_df['ema_144'], label='EMA 144', color='purple', linewidth=1)
+        ax.plot(range(len(recent_df)), recent_df['ema_169'], label='EMA 169', color='orange', linewidth=1)
 
         ax.set_title('Stock Price')
         ax.grid(True)
         ax.legend(loc='best')
 
-        date_idx_to_date = self.df['date'].reset_index(drop=True).to_dict()  # 整数索引到日期的映射
+        date_idx_to_date = recent_df['date'].reset_index(drop=True).to_dict()  # 整数索引到日期的映射
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
         ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: date_idx_to_date.get(x, '')))  # 使用自定义刻度标签
 
     
     def draw_macd(self, ax):
-        df = self.df
+        df = self.df.copy()
+        df['date'] = pd.to_datetime(df['date'])
+
         ema12 = df['close'].ewm(span=12, adjust=False).mean()
         ema26 = df['close'].ewm(span=26, adjust=False).mean()
         macd = ema12 - ema26
         signal = macd.ewm(span=9, adjust=False).mean()
-        ax.plot(df['date'], macd, label='MACD', color='red')
-        ax.plot(df['date'], signal, label='Signal Line', color='blue')
+
+        # 仅选取最近6个月的数据
+        six_months_ago = df['date'].iloc[-1] - timedelta(days=self.drawOnly)
+        recent_df = df[df['date'] >= six_months_ago]
+
+        ax.plot(recent_df['date'], macd.loc[recent_df.index], label='MACD', color='red')
+        ax.plot(recent_df['date'], signal.loc[recent_df.index], label='Signal Line', color='blue')
 
         ax.legend(loc='upper left')
         ax.set_title('MACD')
@@ -58,6 +75,8 @@ class StockDraw:
 
         # 仅显示具有成交数据的日期
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: recent_df['date'].iloc[pos].strftime('%Y-%m-%d') if pos in recent_df.index else ''))
+
 
 
     def draw_kdj(self, ax):
@@ -130,14 +149,16 @@ class StockDraw:
     #如果当天的收盘价与前一天相同，则OBV保持不变。
 
     def draw_obv(self, ax):
-        df = self.df
+        df = self.df.copy()
+        df['date'] = pd.to_datetime(df['date'])
+
         try:
             df['volume'] = df['volume'].astype(float)
         except ValueError:
             for value in df['volume']:
                 print(value)
         df['close'] = df['close'].astype(float)
-        
+
         # 计算OBV
         obv = [0]
         for i in range(1, len(df)):
@@ -154,12 +175,16 @@ class StockDraw:
         obv_ma5 = df['obv'].rolling(window=5).mean()
         obv_ma10 = df['obv'].rolling(window=10).mean()
 
+        # 仅选取最近6个月的数据
+        six_months_ago = df['date'].iloc[-1] - timedelta(days=self.drawOnly)
+        recent_df = df[df['date'] >= six_months_ago]
+
         # 绘制OBV折线图
-        ax.plot(df['date'], df['obv'], label='OBV', color='red', alpha=0.7)
+        ax.plot(recent_df['date'], recent_df['obv'], label='OBV', color='red', alpha=0.7)
 
         # 绘制 5 日和 10 日平均OBV折线图
-        ax.plot(df['date'], obv_ma5, label='5-day MA', color='blue')
-        ax.plot(df['date'], obv_ma10, label='10-day MA', color='orange')
+        ax.plot(recent_df['date'], obv_ma5.loc[recent_df.index], label='5-day MA', color='blue')
+        ax.plot(recent_df['date'], obv_ma10.loc[recent_df.index], label='10-day MA', color='orange')
 
         ax.legend(loc='upper left')
         ax.set_title('On Balance Volume (OBV)')
@@ -167,7 +192,7 @@ class StockDraw:
 
         # 仅显示具有成交数据的日期
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True, prune='both'))
-
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: recent_df['date'].iloc[pos].strftime('%Y-%m-%d') if pos in recent_df.index else ''))
 
 
     def draw_macd_kdj(self, stock_code):
@@ -211,12 +236,12 @@ class StockDraw:
         self.draw_macd(ax2)
         self.draw_obv(ax3)
 
-        plt.savefig(self.strategy_path + stock_code + "_" + date_last + ".jpg")
+        plt.savefig(self.strategy_path + StockData.getStockName(stock_code) + "_" + date_last + ".jpg")
 
 if __name__ == '__main__':
-    stockData = StockData('2022-10-01', '2023-04-21', 2)
-    dfOne = stockData.getOneStockData('sh.601127')
-    stockDraw = StockDraw(dfOne, 'macd')
-    stockDraw.draw_candle_macd_obv('赛力斯', '2023-04-21')
+    stockData = StockData('2010-10-01', '2023-04-21', 2)
+    dfOne = stockData.getOneStockData('sz.002756')
+    stockDraw = StockDraw(dfOne, 'macd', 6*30)
+    stockDraw.draw_candle_macd_obv('sz.002756', '2023-04-21')
 
 

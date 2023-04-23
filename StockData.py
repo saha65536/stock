@@ -219,9 +219,24 @@ class StockData:
             return dfall
         elif self.__data_type__ == StockData.DB_TYPE:
             df = pd.read_sql_query("select * from stocks_hs300 UNION ALL SELECT * from stocks_zz500", self.conn)
-            return df            
+            return df    
 
-      
+    @staticmethod
+    def getStockName(code):
+        conn = sqlite3.connect(StockData.DBNAME)     
+        cursor = conn.cursor()
+        cursor.execute("select code_name from " 
+                    + "(select code,code_name from stocks_hs300 UNION ALL SELECT code,code_name from stocks_zz500)"
+                    + "where code = '" + code + "'")
+        # Fetch the result of the query
+        codeNm_tuple = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if codeNm_tuple:
+            return str(codeNm_tuple[0])
+        else:
+            return None
+   
     
 if __name__ == '__main__':
     stockData = StockData('2010-01-01', '2023-04-21', 2)
