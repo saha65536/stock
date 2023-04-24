@@ -252,9 +252,9 @@ class StockData:
    
     
 if __name__ == '__main__':
-    stockData = StockData('2023-01-01', '2023-04-24', 2, 'd')
+    stockData = StockData('2001-01-01', '2023-04-24', 2, 'd')
     #stockData.updateStocks()
-    stockData.downloadData()
-    #stockData.downloadOneStockData('sh.601127')
+    #stockData.downloadData()
+    stockData.downloadOneStockData('sh.000001')
 
 
