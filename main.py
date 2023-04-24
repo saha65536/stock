@@ -63,8 +63,9 @@ def macdGet():
         macdIns.analyse(dfOne, stockCode, stockName)
 
 def crossYear():
-    stockData = StockData('2010-01-01', '2023-04-21', 2)
+    stockData = StockData('2010-01-01', '2023-04-21', 2, 'd')
     dfList = stockData.getStocksList()
+    resultArr =[]
     for index,row in dfList.iterrows():
         stockCode = row['code']
         stockName = row['code_name']
@@ -72,7 +73,11 @@ def crossYear():
         dfOne = stockData.getOneStockData(stockCode)
         if 0 == len(dfOne):
             continue
-        crossYearIns.analyse(dfOne, stockCode, stockName)
+        if True == crossYearIns.analyse(dfOne, stockCode, stockName):
+            resultArr.append(stockCode)
+
+    print(resultArr)
+
 
 if __name__ == '__main__':
     crossYear()

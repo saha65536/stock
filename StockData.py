@@ -10,7 +10,7 @@ class StockData:
     DB_TYPE = 2
     DBNAME = 'D:/sqlite/data/stocks_db.db'
 
-    def __init__(self, beg_date, end_date, dataType):
+    def __init__(self, beg_date, end_date, dataType, fhzType):
         lg = bs.login()
         print('login respond error_code:'+lg.error_code)
         print('login respond  error_msg:'+lg.error_msg) 
@@ -19,6 +19,7 @@ class StockData:
         self.__beg_date__ = beg_date
         self.__end_date__ = end_date
         self.__data_type__ = dataType 
+        self.__fhz_type__ = fhzType
         if dataType == StockData.DB_TYPE:
             # 创建一个SQLite3连接
             try:
@@ -113,11 +114,17 @@ class StockData:
 
     def __insert_into_db__(self, df):     
         # 将DataFrame数据插入到SQLite3数据库的表中
-        df.to_sql('stock_day_data', self.conn, if_exists='append', index=False,
-                dtype={'date': 'TEXT', 'code': 'TEXT', 'open': 'REAL', 'high': 'REAL',
-                        'low': 'REAL', 'close': 'REAL', 'preclose': 'REAL', 'volume': 'INTEGER',
-                        'amount': 'REAL', 'adjustflag': 'INTEGER', 'turn': 'REAL', 'tradestatus': 'INTEGER',
-                        'pctChg': 'REAL', 'isST': 'INTEGER'})
+        if "d" == self.__fhz_type__:
+            df.to_sql('stock_day_data', self.conn, if_exists='append', index=False,
+                    dtype={'date': 'TEXT', 'code': 'TEXT', 'open': 'REAL', 'high': 'REAL',
+                            'low': 'REAL', 'close': 'REAL', 'preclose': 'REAL', 'volume': 'INTEGER',
+                            'amount': 'REAL', 'adjustflag': 'INTEGER', 'turn': 'REAL', 'tradestatus': 'INTEGER',
+                            'pctChg': 'REAL', 'isST': 'INTEGER'})
+        elif "30" == self.__fhz_type__:
+            df.to_sql('stock_30min_data', self.conn, if_exists='append', index=False,
+                    dtype={'date': 'TEXT', 'time': 'TEXT', 'code': 'TEXT', 'open': 'REAL', 'high': 'REAL',
+                 'low': 'REAL', 'close': 'REAL', 'volume': 'REAL', 'amount': 'REAL', 'adjustflag': 'INTEGER'})
+
 
 
     def shrink_date_range(self, min_date, max_date, beg_date, end_date):
@@ -166,17 +173,23 @@ class StockData:
 
         beg_date, end_date = self.shrink_date_range(min_date, max_date, beg_date, end_date)
 
-        if beg_date > end_date:
+        if beg_date is None or beg_date > end_date:
             return
 
         
         # 分钟线指标：date,time,code,open,high,low,close,volume,amount,adjustflag
         # 周月线指标：date,code,open,high,low,close,volume,amount,adjustflag,turn,pctChg
-        rs = bs.query_history_k_data_plus(stock_code,
-            "date,code,open,high,low,close,preclose,volume"+
-            ",amount,adjustflag,turn,tradestatus,pctChg,isST",
-            start_date = beg_date, end_date = end_date,
-            frequency="d", adjustflag="2")
+        if "d" == self.__fhz_type__:
+            rs = bs.query_history_k_data_plus(stock_code,
+                "date,code,open,high,low,close,preclose,volume"+
+                ",amount,adjustflag,turn,tradestatus,pctChg,isST",
+                start_date = beg_date, end_date = end_date,
+                frequency=self.__fhz_type__, adjustflag="2")        
+        else:
+            rs = bs.query_history_k_data_plus(stock_code,
+                "date,time,code,open,high,low,close,volume,amount,adjustflag",
+                start_date = beg_date, end_date = end_date,
+                frequency=self.__fhz_type__, adjustflag="2")
         
         # 打印结果集
         data_list = []
@@ -235,12 +248,12 @@ class StockData:
         if codeNm_tuple:
             return str(codeNm_tuple[0])
         else:
-            return None
+            return code
    
     
 if __name__ == '__main__':
-    stockData = StockData('2010-01-01', '2023-04-21', 2)
-    stockData.updateStocks()
+    stockData = StockData('2023-01-01', '2023-04-24', 2, 'd')
+    #stockData.updateStocks()
     stockData.downloadData()
     #stockData.downloadOneStockData('sh.601127')
 

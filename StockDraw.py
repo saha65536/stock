@@ -239,9 +239,13 @@ class StockDraw:
         plt.savefig(self.strategy_path + StockData.getStockName(stock_code) + "_" + date_last + ".jpg")
 
 if __name__ == '__main__':
-    stockData = StockData('2010-10-01', '2023-04-21', 2)
-    dfOne = stockData.getOneStockData('sz.002756')
-    stockDraw = StockDraw(dfOne, 'macd', 6*30)
-    stockDraw.draw_candle_macd_obv('sz.002756', '2023-04-21')
+    drawArr = ['sz.000538', 'sz.300760', 'sh.600369', 'sh.600517', 'sh.600623', 'sh.601992','sz.300223']
+    stockData = StockData('2010-10-01', '2023-04-24', 2,'d')
+    for code in drawArr:
+        dfOne = stockData.getOneStockData(code)
+        if len(dfOne) == 0:
+            continue
+        stockDraw = StockDraw(dfOne, 'crossyear', 6*30)
+        stockDraw.draw_candle_macd_obv(code, '2023-04-24')
 
 
